@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: Handling Duplicated Messages
+  jpa:
+    open-in-view: false
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+  datasource:
+    url: jdbc:postgresql://localhost:5432/handling_duplicate_messages
+    username: postgres
+    password: example
+    driver-class-name: org.postgresql.Driver
+    platform: postgres
+  cloud:
+    aws:
+      endpoint: http://localhost:4566
+logging:
+  level:
+    io:
+      awspring:
+        cloud: debug

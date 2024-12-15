@@ -1,0 +1,6 @@
+CREATE TABLE tickets (
+    id SERIAL NOT NULL PRIMARY KEY,
+    dish_name VARCHAR(255) NOT NULL,
+    price DECIMAL(6,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
