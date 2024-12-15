@@ -29,7 +29,14 @@ To handle duplicate messages, you can adopt one of two primary strategies:
 ### 2. **Discarding Duplicates by Tracking Processed Messages**
 - A simpler and often more practical approach is to discard duplicate messages by tracking already processed ones. This can be achieved by storing the IDs of processed messages and discarding any new message with the same ID. This approach ensures that duplicate messages do not trigger redundant processing.
 
+- When using this strategy, you must remember to clean the database table that keeps track of the processed messages. 
+Depending on the database that you choose to use, you configure an TTL or a simple scheduler that cleans the old tracked
+messages, otherwise this table tends to grow very fast causing an impact on performance. The purpose of this kind of table
+is to be ephemeral, just to keep track of the messages for a short period of time (enough to make sure that the message has 
+already been handled in any way and won't be lost).  
+
 By applying these strategies, you can ensure that your application remains robust and can handle duplicate messages effectively, maintaining the integrity of your system.
+
 
 ## Example Scenario Implemented
 
