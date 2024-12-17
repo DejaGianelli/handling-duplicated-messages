@@ -1,6 +1,7 @@
 package com.drivelab.handling.duplicated.messages.listeners;
 
 import com.drivelab.handling.duplicated.messages.domain.services.ProcessOrderCreatedService;
+import com.drivelab.handling.duplicated.messages.messaging.DuplicatedMessageException;
 import com.drivelab.handling.duplicated.messages.messaging.ProcessedMessage;
 import com.drivelab.handling.duplicated.messages.messaging.ProcessedMessageRepository;
 import io.awspring.cloud.sqs.annotation.SqsListener;
@@ -31,8 +32,8 @@ public class OrderCreatedListener {
         this.processOrderCreatedService = processOrderCreatedService;
     }
 
-    @SqsListener(value = QUEUE_URL, factory = "sqsListenerContainerFactory")
     @Transactional
+    @SqsListener(value = QUEUE_URL, factory = "sqsListenerContainerFactory")
     public void listen(Message<OrderCreatedMessage> message, Acknowledgement ack) {
         UUID messageId = message.getHeaders().getId();
 
@@ -40,20 +41,24 @@ public class OrderCreatedListener {
 
         LOGGER.info("Consuming message {}: {}", messageId, message.getPayload());
 
-        try {
-            ProcessedMessage processedMessage = new ProcessedMessage(messageId);
-            processedMessageRepository.save(processedMessage);
-        } catch (DataIntegrityViolationException ex) {
-            LOGGER.warn("Duplicated messaged {}. Ignored and acknowledged", messageId);
-            ack.acknowledgeAsync();
-            throw ex;
-        }
-
         processOrderCreatedService.process(orderCreatedMessage.getDishName(), orderCreatedMessage.getPrice());
+
+        this.checkDuplicatedMessage(message, ack);
 
         LOGGER.info("Message {} processed:", messageId);
 
         //Comment the line below to emulate a non ACK message
         ack.acknowledgeAsync();
+    }
+
+    private void checkDuplicatedMessage(Message<OrderCreatedMessage> message, Acknowledgement ack) {
+        UUID messageId = message.getHeaders().getId();
+        try {
+            ProcessedMessage processedMessage = new ProcessedMessage(messageId);
+            processedMessageRepository.save(processedMessage);
+        } catch (DataIntegrityViolationException ex) {
+            ack.acknowledgeAsync();
+            throw new DuplicatedMessageException(messageId);
+        }
     }
 }

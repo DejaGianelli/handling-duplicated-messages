@@ -1,8 +1,11 @@
 package com.drivelab.handling.duplicated.messages.config;
 
+import com.drivelab.handling.duplicated.messages.messaging.DuplicatedMessageException;
 import io.awspring.cloud.sqs.config.SqsMessageListenerContainerFactory;
 import io.awspring.cloud.sqs.listener.acknowledgement.AsyncAcknowledgementResultCallback;
 import io.awspring.cloud.sqs.listener.acknowledgement.handler.AcknowledgementMode;
+import io.awspring.cloud.sqs.listener.errorhandler.ErrorHandler;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -28,9 +31,25 @@ public class AppConfig {
                 .configure(options -> options
                         .acknowledgementMode(AcknowledgementMode.MANUAL)
                 )
+                .errorHandler(getErrorHandler())
                 .sqsAsyncClient(sqsAsyncClient)
                 .acknowledgementResultCallback(getAsyncAcknowledgementResultCallback())
                 .build();
+    }
+
+    private ErrorHandler<Object> getErrorHandler() {
+        return new ErrorHandler<>() {
+            private static final Logger LOGGER = LoggerFactory.getLogger(ErrorHandler.class);
+
+            @Override
+            public void handle(Message<Object> message, Throwable t) {
+                if (ExceptionUtils.getRootCause(t) instanceof DuplicatedMessageException ex) {
+                    LOGGER.warn("Duplicated messaged {} discarded. Trying to acknowledge", ex.getMessageId());
+                    return;
+                }
+                ErrorHandler.super.handle(message, t);
+            }
+        };
     }
 
     private AsyncAcknowledgementResultCallback<Object> getAsyncAcknowledgementResultCallback() {
